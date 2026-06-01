@@ -1,0 +1,52 @@
+name: Sync con template de Crowder
+
+# Mantiene la copia del cliente como un espejo exacto de la repo original.
+#
+# El botón "Deploy" de Vercel crea un repo NUEVO con el historial aplastado en
+# un solo "Initial commit" (no es un fork). Por eso la copia no comparte
+# ancestro de git con el upstream y un `git merge` fallaría con "unrelated
+# histories". En su lugar reseteamos la rama al estado de upstream y forzamos el
+# push: la copia queda idéntica al template y Vercel re-despliega solo.
+#
+# - Corre cada día (cron) y también a mano desde la pestaña Actions.
+# - No corre en la repo original (guardado por el `if` del job).
+# - Modelo del proyecto: el cliente NO edita código; personaliza vía variables
+#   de entorno en Vercel. Cualquier cambio de código en la copia se sobrescribe.
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # todos los días 06:00 UTC
+  workflow_dispatch: {} # botón "Run workflow" manual
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Solo corre en copias de clientes, nunca en la repo original.
+    if: github.repository != 'getcrowder/crowder-app-forms-template'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Añadir upstream
+        run: git remote add upstream https://github.com/getcrowder/crowder-app-forms-template.git
+
+      - name: Traer cambios del upstream
+        run: git fetch upstream "${{ github.ref_name }}"
+
+      - name: Espejar el contenido de upstream
+        # reset --hard funciona aunque el historial no esté relacionado.
+        run: git reset --hard "upstream/${{ github.ref_name }}"
+
+      - name: Push a la copia del cliente
+        # --force porque el historial reseteado diverge del de la copia.
+        run: git push --force origin "HEAD:${{ github.ref_name }}"

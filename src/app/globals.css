@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tailwind gray palette mapped to semantic tokens (light mode).
+       Si modificás algún token acá, mantené sincronizado el override del
+       embed más abajo (selector :has([data-embed-root])). */
+    --background: 0 0% 100%; /* white */
+    --foreground: 222 47% 11%; /* gray-900 */
+
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 222 47% 11%; /* gray-900 */
+
+    --popover: 0 0% 100%; /* white */
+    --popover-foreground: 222 47% 11%; /* gray-900 */
+
+    --muted: 210 20% 98%; /* gray-50 */
+    --muted-foreground: 215 14% 34%; /* gray-600 */
+
+    --subtle: 220 14% 96%; /* gray-100 */
+    --subtle-foreground: 217 19% 27%; /* gray-700 */
+
+    --accent: 220 14% 96%; /* gray-100 */
+    --accent-foreground: 222 47% 11%; /* gray-900 */
+
+    --secondary-foreground: 217 19% 27%; /* gray-700 */
+
+    --border: 220 13% 91%; /* gray-200 */
+    --input: 220 13% 91%; /* gray-200 */
+    --ring: 217 91% 60%; /* blue-500 */
+
+    --faint: 218 11% 65%; /* gray-400 */
+
+    --primary: 217 91% 60%; /* blue-500 */
+    --primary-foreground: 0 0% 100%; /* white */
+    --primary-hover: 217 91% 53%; /* blue-600 */
+
+    --destructive: 0 84% 60%; /* red-500 */
+    --destructive-foreground: 0 0% 100%; /* white */
+  }
+
+  .dark {
+    /* Tailwind gray palette mapped to semantic tokens (dark mode) */
+    --background: 229 84% 5%; /* gray-950 */
+    --foreground: 210 20% 98%; /* gray-50 */
+
+    --card: 229 84% 5%; /* gray-950 */
+    --card-foreground: 210 20% 98%; /* gray-50 */
+
+    --popover: 229 84% 5%; /* gray-950 */
+    --popover-foreground: 210 20% 98%; /* gray-50 */
+
+    --muted: 221 39% 11%; /* gray-900 */
+    --muted-foreground: 218 11% 65%; /* gray-400 */
+
+    --subtle: 215 28% 17%; /* gray-800 */
+    --subtle-foreground: 216 12% 84%; /* gray-300 */
+
+    --accent: 215 28% 17%; /* gray-800 */
+    --accent-foreground: 210 20% 98%; /* gray-50 */
+
+    --secondary-foreground: 216 12% 84%; /* gray-300 */
+
+    --border: 215 28% 17%; /* gray-800 */
+    --input: 215 28% 17%; /* gray-800 */
+    --ring: 217 91% 60%; /* blue-500 */
+
+    --faint: 215 14% 34%; /* gray-600 */
+
+    --primary: 217 91% 60%; /* blue-500 */
+    --primary-foreground: 0 0% 100%; /* white */
+    --primary-hover: 213 94% 68%; /* blue-400 */
+
+    --destructive: 0 91% 71%; /* red-400 */
+    --destructive-foreground: 0 0% 100%; /* white */
+  }
+}
+
+/* El iframe del embed siempre se renderiza claro, sin importar el theme del
+   host ni el modo oscuro del sistema/navegador. `color-scheme: light` evita
+   que iOS/Chrome apliquen auto-dark sobre los inputs nativos, y re-asignamos
+   los tokens light por si <html> tiene `.dark` (heredado del RootLayout).
+
+   El reset de html/body se ancla a `data-embed-page` (sólo presente en las
+   páginas /embed), no a `data-embed-root`: así el preview del dashboard —que
+   monta un `data-embed-root` dentro de la app— sólo aclara el subtree del
+   wizard sin arrastrar el tema de todo el dashboard. */
+@layer base {
+  html:has([data-embed-page]),
+  body:has([data-embed-page]),
+  [data-embed-root] {
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --muted: 210 20% 98%;
+    --muted-foreground: 215 14% 34%;
+    --subtle: 220 14% 96%;
+    --subtle-foreground: 217 19% 27%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
+    --secondary-foreground: 217 19% 27%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+    --faint: 218 11% 65%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 53%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Embed-only overrides — applied inside the iframe to match the
+   Crowder Embedded App UI guidelines:
+   https://crowder-docs.vercel.app/embedded-app/build/ui-guidelines/
+   Text inputs / selects use an underline-only style with a floating
+   label; primary buttons are filled with 6px radius and 48px height.
+   Scoped via [data-embed-root] so the dashboard keeps its own styles. */
+@layer components {
+  [data-embed-root] .embed-cta {
+    min-height: 48px;
+    border-radius: 6px;
+  }
+
+  [data-embed-root] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  [data-embed-root] textarea,
+  [data-embed-root] select,
+  [data-embed-root] [role="combobox"] {
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1px solid hsl(var(--border));
+    border-radius: 0;
+    padding: 0;
+    height: 40px;
+    min-height: 40px;
+    line-height: 1;
+    font-size: inherit;
+    font-weight: normal;
+    box-shadow: none;
+    outline: 0;
+    transition: border-color 0.2s ease-in-out;
+  }
+
+  /* On touch devices, iOS Safari auto-zooms when an input has font-size < 16px.
+     pointer: coarse targets touch input without depending on iframe width.
+     Use max() so we never shrink a host font that is already larger. */
+  @media (pointer: coarse) {
+    [data-embed-root] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    [data-embed-root] textarea,
+    [data-embed-root] select,
+    [data-embed-root] [role="combobox"] {
+      font-size: max(16px, 1em);
+    }
+  }
+
+  /* Hide the native placeholder while the floating label is in its resting
+     position — otherwise both render on top of each other. */
+  [data-embed-root]
+    [data-embed-field]:not(:focus-within):not([data-filled="true"])
+    input::placeholder,
+  [data-embed-root]
+    [data-embed-field]:not(:focus-within):not([data-filled="true"])
+    textarea::placeholder {
+    color: transparent;
+  }
+
+  [data-embed-root] textarea {
+    height: auto;
+    min-height: 96px;
+    padding-top: 8px;
+    line-height: 1.4;
+  }
+
+  [data-embed-root] input:focus:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  [data-embed-root] textarea:focus,
+  [data-embed-root] select:focus,
+  [data-embed-root] [role="combobox"][data-state="open"],
+  [data-embed-root] [role="combobox"]:focus {
+    border-bottom-color: hsl(var(--primary));
+    box-shadow: none;
+    outline: 0;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+  }
+
+  [data-embed-root] input[aria-invalid="true"],
+  [data-embed-root] textarea[aria-invalid="true"],
+  [data-embed-root] [role="combobox"][aria-invalid="true"] {
+    border-bottom-color: hsl(var(--destructive));
+  }
+
+  /* Floating-label wrapper: opt-in via data-embed-field on the field container. */
+  [data-embed-root] [data-embed-field] {
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  [data-embed-root] [data-embed-field] > [data-embed-label] {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    font-size: inherit;
+    line-height: 1;
+    opacity: 0.5;
+    pointer-events: none;
+    transform-origin: 0 0;
+    transition:
+      transform 0.25s ease-in-out,
+      opacity 0.25s ease-in-out,
+      color 0.25s ease-in-out;
+  }
+
+  /* Active state: focus, or filled (FormRenderer sets data-filled="true"). */
+  [data-embed-root] [data-embed-field]:focus-within > [data-embed-label],
+  [data-embed-root] [data-embed-field][data-filled="true"] > [data-embed-label] {
+    transform: translate(0, -22px) scale(0.8);
+    opacity: 0.8;
+  }
+
+  [data-embed-root] [data-embed-field]:focus-within > [data-embed-label] {
+    color: hsl(var(--primary));
+  }
+
+  [data-embed-root] [data-embed-field] > [data-embed-help],
+  [data-embed-root] [data-embed-field] > [data-embed-error] {
+    margin-top: 6px;
+  }
+}
