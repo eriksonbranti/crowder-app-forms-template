@@ -272,6 +272,7 @@ export function buildFormExportTable(params: {
 
   const columns: ExportColumn[] = [
     { header: "transaction.id" },
+    { header: "transaction.purchase_id", type: "number" },
     { header: "transaction.status" },
     { header: "event.id", type: "number" },
     { header: "event.name" },
@@ -287,6 +288,7 @@ export function buildFormExportTable(params: {
 
   const rows = persons.map((p) => [
     p.transactionId,
+    p.purchaseId ?? "",
     p.transactionStatus,
     p.eventId,
     p.eventName,

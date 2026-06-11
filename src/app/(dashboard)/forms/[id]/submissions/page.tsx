@@ -279,6 +279,7 @@ export default async function FormDrilldownPage({
                   <thead className="border-b border-border text-xs uppercase text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">Persona</th>
+                      <th className="px-4 py-3 font-medium">ID Crowder</th>
                       <th className="px-4 py-3 font-medium">Evento</th>
                       {allQuestions.map((q) => (
                         <th key={q.id} className="px-4 py-3 font-medium">

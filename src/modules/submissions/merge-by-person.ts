@@ -8,6 +8,10 @@ export type PrefillPath = NonNullable<FormQuestion["prefillFrom"]>
 export type PersonRow = {
   key: string
   transactionId: string
+  // Crowder's native purchase identifier (`purchase.id`), delivered on the
+  // `purchasePaid` webhook. Null until the transaction is confirmed — in
+  // practice always present here since the listing filters to `confirmed`.
+  purchaseId: number | null
   transactionStatus: TransactionStatus
   eventId: number
   eventName: string
@@ -59,6 +63,7 @@ export function mergeByPerson(rows: DrilldownRow[]): PersonRow[] {
       buyerName: string | null
       buyerEmail: string | null
       transactionId: string
+      purchaseId: number | null
       context: Partial<Record<PrefillPath, string>>
     }
   >()
@@ -93,6 +98,7 @@ export function mergeByPerson(rows: DrilldownRow[]): PersonRow[] {
         person = {
           key,
           transactionId: s.transactionId,
+          purchaseId: r.transactionPurchaseId,
           transactionStatus: r.transactionStatus,
           eventId: r.eventId,
           eventName: r.eventName,
@@ -132,6 +138,7 @@ export function mergeByPerson(rows: DrilldownRow[]): PersonRow[] {
           buyerName,
           buyerEmail: r.userEmail,
           transactionId: s.transactionId,
+          purchaseId: r.transactionPurchaseId,
           context: userContextFrom(r),
         })
       } else {
@@ -170,6 +177,7 @@ export function mergeByPerson(rows: DrilldownRow[]): PersonRow[] {
     standaloneTx.push({
       key: `${tx.transactionId}|`,
       transactionId: tx.transactionId,
+      purchaseId: tx.purchaseId,
       transactionStatus: tx.status,
       eventId: tx.eventId,
       eventName: tx.eventName,

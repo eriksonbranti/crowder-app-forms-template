@@ -69,11 +69,14 @@ export function FormSubmissionRow({
               {row.buyerEmail && (
                 <p className="text-xs text-muted-foreground">{row.buyerEmail}</p>
               )}
-              <p className="font-mono text-[11px] text-muted-foreground">
-                {row.transactionId.slice(0, 14)}…
-              </p>
             </>
           )}
+        </td>
+        <td
+          className="px-4 py-3 font-mono text-xs text-secondary-foreground"
+          title={`Interaction: ${row.transactionId}`}
+        >
+          {row.purchaseId ?? "—"}
         </td>
         <td className="px-4 py-3 text-secondary-foreground">
           <div className="truncate" title={row.eventName}>
