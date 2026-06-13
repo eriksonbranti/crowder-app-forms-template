@@ -176,6 +176,7 @@ export default async function TransactionsPage({
               <thead className="border-b border-border text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">ID</th>
+                  <th className="px-4 py-3 font-medium">ID de compra</th>
                   <th className="px-4 py-3 font-medium">Evento</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
                   <th className="px-4 py-3 text-right font-medium">Compra</th>
@@ -197,6 +198,13 @@ export default async function TransactionsPage({
                       >
                         {truncateId(t.id, 24)}
                       </Link>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
+                      {t.purchaseId != null ? (
+                        `#${t.purchaseId}`
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-secondary-foreground">
                       <Link
