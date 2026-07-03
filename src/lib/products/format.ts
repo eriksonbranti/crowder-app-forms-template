@@ -22,6 +22,25 @@ function numberFormat(
   return fmt
 }
 
+// Rango de precios (lo/hi) de una lista de variantes; null si ninguna tiene
+// precio. Primitiva compartida por el listado del fan (ProductSelector) y el
+// dashboard (CatalogDetail), que solo difieren en el texto final. `onlySellable`
+// limita a variantes vendibles (lo que ve el fan); el dashboard las incluye todas.
+export function priceRange(
+  variants: { price: number | null; sellable?: boolean }[],
+  opts?: { onlySellable?: boolean },
+): { lo: number; hi: number } | null {
+  let lo = Infinity
+  let hi = -Infinity
+  for (const v of variants) {
+    if (opts?.onlySellable && !v.sellable) continue
+    if (v.price == null) continue
+    if (v.price < lo) lo = v.price
+    if (v.price > hi) hi = v.price
+  }
+  return lo === Infinity ? null : { lo, hi }
+}
+
 export function formatPrice(
   amount: number,
   currency: string | null | undefined,

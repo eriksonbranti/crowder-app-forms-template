@@ -13,6 +13,10 @@ export type RenderVariant = {
   imageUrl: string | null // portada de la variante; fallback a product.imageUrl
   // Disponibilidad optimista (matriz de stock sección 4.4, SIN restar holds).
   sellable: boolean
+  // Unidades disponibles para el stepper del carrito, optimista (SIN restar
+  // holds). `null` = ilimitado (sin track de stock o backorder); un número = tope
+  // duro de cuántas unidades de esta variante se pueden agregar.
+  available: number | null
 }
 
 export type RenderProduct = {

@@ -28,6 +28,7 @@ import {
   type ProductAnswerSource,
   type ProductForDerive,
 } from "@/lib/products/derive"
+import { ticketCountForScope } from "@/lib/products/quantity"
 import { generateId } from "@/modules/transactions"
 
 import * as repo from "./repository"
@@ -126,7 +127,11 @@ export async function submitBatch(input: {
       }
     }
 
-    const parsed = answersSchemaForGroup(group).safeParse(s.answers)
+    // El ticketCount (para preguntas `product` en modo `perTickets`) sale del
+    // contexto de la compra: número de líneas para scope=transaction, 1 por ítem.
+    const parsed = answersSchemaForGroup(group, {
+      ticketCount: ticketCountForScope(group.scope, context.items.length),
+    }).safeParse(s.answers)
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
         errors.push({
@@ -281,6 +286,9 @@ export async function editSubmission(input: {
     )
   }
 
+  // Edición admin: no hay contexto de la compra, así que las preguntas `product`
+  // en modo `perTickets` se validan de forma estructural laxa (forma + unicidad),
+  // sin re-imponer el 1:1 exacto — que ya se validó en el submit original.
   const parsed = answersSchemaForGroup(group).safeParse(input.answers)
   if (!parsed.success) {
     const errors: ValidationError[] = parsed.error.issues.map((issue) => ({

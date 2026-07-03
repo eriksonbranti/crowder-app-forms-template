@@ -37,6 +37,14 @@ const productNotFound = (id: string) =>
 
 // ─── catalogs ─────────────────────────────────────────────────────────────
 
+// La moneda solo la define el catálogo manual; en uno integrado la fija el sync
+// del proveedor y nunca se edita a mano, aunque la UI mande el campo. Fuente
+// única del invariante, compartida por create y update.
+const currencyForManual = (
+  source: CatalogSource,
+  currency: string | null | undefined,
+): string | null => (source === "manual" ? (currency ?? null) : null)
+
 export async function listCatalogs(): Promise<Catalog[]> {
   return repo.listCatalogs()
 }
@@ -78,7 +86,7 @@ export async function createCatalog(input: {
     title,
     source: input.source,
     credentialId: input.credentialId ?? null,
-    currency: input.currency ?? null,
+    currency: currencyForManual(input.source, input.currency),
   })
 }
 
@@ -86,7 +94,12 @@ export async function updateCatalog(
   id: string,
   patch: { title?: string; currency?: string | null },
 ): Promise<Catalog> {
-  const next = await repo.updateCatalog(id, patch)
+  const current = await repo.getCatalog(id)
+  if (!current) throw catalogNotFound(id)
+  const safe = { ...patch }
+  if (safe.currency !== undefined)
+    safe.currency = currencyForManual(current.source, safe.currency)
+  const next = await repo.updateCatalog(id, safe)
   if (!next) throw catalogNotFound(id)
   return next
 }
@@ -363,6 +376,14 @@ function variantSellable(variant: ProductVariant): boolean {
   return (variant.stock ?? 0) > 0 // deny: vendible mientras stock > 0
 }
 
+// Unidades que el carrito puede agregar de una variante, SIN restar holds (igual
+// de optimista que `variantSellable`). `null` = ilimitado (sin track o backorder).
+function variantAvailable(variant: ProductVariant): number | null {
+  if (!variant.stockTracked) return null // ilimitada
+  if (variant.oversellPolicy === "continue") return null // backorder
+  return Math.max(0, variant.stock ?? 0)
+}
+
 // Proyecta un Product (fila) a la forma render-safe que viaja al cliente: sin
 // `raw` ni campos internos, con `sellable` calculado (disponibilidad optimista).
 export function toRenderProduct(product: Product): RenderProduct {
@@ -384,6 +405,7 @@ export function toRenderProduct(product: Product): RenderProduct {
       images: v.images ?? [],
       imageUrl: v.imageUrl,
       sellable: variantSellable(v),
+      available: variantAvailable(v),
     })),
   }
 }

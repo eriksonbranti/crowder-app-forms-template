@@ -100,11 +100,15 @@ const questionSchema = z
           })
           .optional(),
         productIds: z.array(z.string().min(1)).optional(),
+        // "perTickets": min/max se derivan de la cantidad de entradas (1 por
+        // entrada); "fixed" (default): usa los min/max de abajo.
+        quantitySource: z.enum(["fixed", "perTickets"]).optional(),
         min: z.number().int().min(0).optional(),
-        // Tope duro del protocolo Crowder: 1–10 items por interaction (sección 9.2).
+        // Salvaguarda anti-abuso (ya no el "1–10" del protocolo, que Crowder acepta
+        // superar): cota alta al máximo configurable.
         max: z.number().int().min(1).max(MAX_PARTNER_ITEMS).optional(),
-        allowQuantity: z.boolean().optional(),
         showPrice: z.boolean().optional(),
+        layout: z.enum(["list", "cards"]).optional(),
       })
       .optional(),
     prefillFrom: z.enum(prefillFromValues).optional(),

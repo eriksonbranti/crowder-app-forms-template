@@ -358,10 +358,17 @@ export type FormQuestion = {
     // filter.collection queda como alias legacy de collectionId; filter.tag aún
     // no se resuelve (el modelo no guarda tags — ver memoria del repo).
     filter?: { tag?: string; collection?: string; status?: "active" }
-    min?: number // mínimo a elegir (default 0)
-    max?: number // máximo a elegir (default 1; ≤ tope 10 del protocolo, sección 9.2)
-    allowQuantity?: boolean // cantidad por producto
+    // Origen de la regla de cantidad (min/max):
+    //   - "fixed" (default): usa los min/max de abajo, tal cual se setean.
+    //   - "perTickets": min y max se DERIVAN de la cantidad de tickets de la
+    //     transacción (context.items.length) → 1 producto por entrada (1:1
+    //     exacto). Los min/max de abajo se ignoran.
+    quantitySource?: "fixed" | "perTickets"
+    min?: number // mínimo a elegir (default 0). Solo aplica en modo "fixed".
+    max?: number // máximo a elegir en UNIDADES totales (default 1). Solo "fixed".
     showPrice?: boolean
+    // Visualización del listado: "list" (filas, default) o "cards" (grilla).
+    layout?: "list" | "cards"
   }
   prefillFrom?:
     | "item.holder.firstName"

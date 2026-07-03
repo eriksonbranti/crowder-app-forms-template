@@ -134,17 +134,21 @@ export function CatalogsManager({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label>
-                  Moneda{isIntegrated ? " · opcional, la trae el sync" : ""}
-                </Label>
-                <CurrencyField
-                  value={currency}
-                  onChange={setCurrency}
-                  supportedCurrencies={supportedCurrencies}
-                  inputPlaceholder="ARS (configurá monedas en Settings)"
-                />
-              </div>
+              {isIntegrated ? (
+                <p className="text-xs text-muted-foreground">
+                  La moneda la define el sync del proveedor; no se configura acá.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  <Label>Moneda</Label>
+                  <CurrencyField
+                    value={currency}
+                    onChange={setCurrency}
+                    supportedCurrencies={supportedCurrencies}
+                    inputPlaceholder="ARS (configurá monedas en Settings)"
+                  />
+                </div>
+              )}
 
               {error && <p className="text-sm text-red-600">{error}</p>}
             </div>
@@ -169,7 +173,8 @@ export function CatalogsManager({
                         ? cred!.provider
                         : "manual") as CatalogSource,
                       credentialId: isIntegrated ? sourceSel : null,
-                      currency: currency.trim() || null,
+                      // La moneda de un catálogo integrado la trae el sync.
+                      currency: isIntegrated ? null : currency.trim() || null,
                     })
                     if (res.ok) {
                       resetForm()

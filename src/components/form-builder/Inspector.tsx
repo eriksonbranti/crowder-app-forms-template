@@ -20,7 +20,7 @@ import type {
   GroupScope,
   QuestionType,
 } from "@/lib/db/schema"
-import { MAX_PARTNER_ITEMS, resolveProductMode } from "@/lib/products/derive"
+import { resolveProductMode } from "@/lib/products/derive"
 
 import { deriveId } from "./derive"
 import { FieldLabel, IconButton, NativeSelect, SwitchRow } from "./primitives"
@@ -818,24 +818,58 @@ function ProductConfigEditor({
         </FieldLabel>
       )}
 
-      <FieldLabel label="Mín. a elegir" hint="0 = opcional.">
-        <Input
-          type="number"
-          min={0}
-          value={cfg.min ?? 0}
-          onChange={(e) => patch({ min: Number(e.target.value) })}
+      <FieldLabel
+        label="Mín./Máx."
+        hint="Fijo: valores manuales. Según tickets: 1 producto por entrada."
+      >
+        <NativeSelect
+          value={cfg.quantitySource ?? "fixed"}
+          onChange={(v) =>
+            patch({ quantitySource: v as "fixed" | "perTickets" })
+          }
+          options={[
+            { value: "fixed", label: "Fijo" },
+            { value: "perTickets", label: "Según tickets" },
+          ]}
         />
       </FieldLabel>
+
+      {(cfg.quantitySource ?? "fixed") === "perTickets" ? (
+        <div className="rounded-md border border-border bg-subtle p-3 text-xs text-muted-foreground">
+          El mínimo y el máximo se ajustan a la cantidad de entradas de la compra:
+          exactamente <strong>1 producto por entrada</strong>.
+        </div>
+      ) : (
+        <>
+          <FieldLabel label="Mín. a elegir" hint="0 = opcional.">
+            <Input
+              type="number"
+              min={0}
+              value={cfg.min ?? 0}
+              onChange={(e) => patch({ min: Number(e.target.value) })}
+            />
+          </FieldLabel>
+          <FieldLabel label="Máx. a elegir">
+            <Input
+              type="number"
+              min={1}
+              value={cfg.max ?? 1}
+              onChange={(e) => patch({ max: Number(e.target.value) })}
+            />
+          </FieldLabel>
+        </>
+      )}
       <FieldLabel
-        label="Máx. a elegir"
-        hint={`≤ ${MAX_PARTNER_ITEMS} (tope del protocolo).`}
+        label="Visualización"
+        hint="Listado: filas compactas. Cards: grilla estilo ecommerce."
       >
-        <Input
-          type="number"
-          min={1}
-          max={MAX_PARTNER_ITEMS}
-          value={cfg.max ?? 1}
-          onChange={(e) => patch({ max: Number(e.target.value) })}
+        <NativeSelect
+          value={cfg.layout ?? "list"}
+          onChange={(v) => patch({ layout: v as "list" | "cards" })}
+          options={[
+            { value: "list", label: "Listado" },
+            { value: "cards", label: "Cards" },
+          ]}
         />
       </FieldLabel>
       <div className="sm:col-span-2">
@@ -843,14 +877,6 @@ function ProductConfigEditor({
           label="Mostrar precio"
           checked={cfg.showPrice ?? false}
           onChange={(v) => patch({ showPrice: v })}
-        />
-      </div>
-      <div className="sm:col-span-2">
-        <SwitchRow
-          label="Permitir cantidad por producto"
-          hint={`Cada unidad consume uno del tope 1–${MAX_PARTNER_ITEMS}.`}
-          checked={cfg.allowQuantity ?? false}
-          onChange={(v) => patch({ allowQuantity: v })}
         />
       </div>
     </div>

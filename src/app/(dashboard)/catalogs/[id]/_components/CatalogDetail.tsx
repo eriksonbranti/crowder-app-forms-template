@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/Table"
 import { CurrencyField } from "@/components/products/CurrencyField"
-import { formatPrice } from "@/lib/products/format"
+import { formatPrice, priceRange } from "@/lib/products/format"
 import { cx } from "@/lib/utils"
 import type {
   CatalogSource,
@@ -79,15 +79,11 @@ type ProductRow = {
 // Rango de precios del producto a partir de sus variantes (las variantes pueden
 // diferir en precio por talla). Devuelve null si ninguna variante tiene precio.
 function priceSummary(p: ProductRow): string | null {
-  const prices = p.variants
-    .map((v) => v.price)
-    .filter((x): x is number => x != null)
-  if (prices.length === 0) return null
-  const min = Math.min(...prices)
-  const max = Math.max(...prices)
-  return min === max
-    ? formatPrice(min, p.currency)
-    : `${formatPrice(min, p.currency)} – ${formatPrice(max, p.currency)}`
+  const range = priceRange(p.variants)
+  if (!range) return null
+  return range.lo === range.hi
+    ? formatPrice(range.lo, p.currency)
+    : `${formatPrice(range.lo, p.currency)} – ${formatPrice(range.hi, p.currency)}`
 }
 
 // Resumen de stock: suma de las variantes con control de stock. null si ninguna
@@ -295,18 +291,23 @@ export function CatalogDetail({
                 placeholder="Merch Festival Aurora"
               />
             </div>
-            <div className="space-y-1">
-              <Label>
-                Moneda{!isManual ? " · opcional, la trae el sync" : ""}
-              </Label>
-              <CurrencyField
-                value={editCurrency}
-                onChange={setEditCurrency}
-                supportedCurrencies={supportedCurrencies}
-                noneLabel="Sin definir"
-                inputPlaceholder="ARS (configurá monedas en Settings)"
-              />
-            </div>
+            {isManual ? (
+              <div className="space-y-1">
+                <Label>Moneda</Label>
+                <CurrencyField
+                  value={editCurrency}
+                  onChange={setEditCurrency}
+                  supportedCurrencies={supportedCurrencies}
+                  noneLabel="Sin definir"
+                  inputPlaceholder="ARS (configurá monedas en Settings)"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                La moneda ({catalog.currency ?? "sin definir"}) la define el sync
+                del proveedor; no se edita acá.
+              </p>
+            )}
 
             {editError && <p className="text-sm text-red-600">{editError}</p>}
           </div>
@@ -327,7 +328,10 @@ export function CatalogDetail({
                 startTransition(async () => {
                   const res = await updateCatalog(catalog.id, {
                     title: editTitle.trim(),
-                    currency: editCurrency.trim() || null,
+                    // Integrado: la moneda la fija el sync, no se manda.
+                    ...(isManual
+                      ? { currency: editCurrency.trim() || null }
+                      : {}),
                   })
                   if (res.ok) setEditOpen(false)
                   else setEditError(res.error)

@@ -3,8 +3,11 @@ import type { FormQuestion, PartnerItem, ProductPick } from "@/lib/db/schema"
 import { sha256Hex } from "./sha256"
 import { hasRealVariants } from "./snapshot"
 
-// Tope duro del protocolo Crowder: 1–10 PartnerItem por interaction (sección 9.2).
-export const MAX_PARTNER_ITEMS = 10
+// Cota dura de PartnerItem por interaction. El spec original de Crowder hablaba
+// de 1–10, pero se confirmó que su backend acepta más; ahora este número es una
+// salvaguarda anti-abuso (el endpoint de submit es un POST anónimo, ver CWE-770
+// en la ruta), NO un límite del protocolo. Alineado con MAX_ITEMS del contexto.
+export const MAX_PARTNER_ITEMS = 200
 
 // Normaliza el valor crudo de una respuesta product (single u array) a ProductPick[].
 // Único lugar que define la dualidad single/array de ProductAnswer; ignora null.
@@ -206,7 +209,8 @@ export function derivePartnerItems(
     }
   }
 
-  // Tope global a la interaction, contado en unidades (sección 9.8).
+  // Salvaguarda anti-abuso (ya no el "1–10" del protocolo): cota alta contada en
+  // unidades. Solo dispara en casos degenerados/maliciosos, no en compras reales.
   if (items.length > MAX_PARTNER_ITEMS) {
     errors.push({ code: "too_many_items", max: MAX_PARTNER_ITEMS, got: items.length })
   }

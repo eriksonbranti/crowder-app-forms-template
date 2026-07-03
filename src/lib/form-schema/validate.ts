@@ -1,6 +1,7 @@
 import { z, type ZodTypeAny } from "zod"
 
 import type { FormGroup, FormQuestion } from "@/lib/db/schema"
+import { resolveQuantityBounds, sumUnits } from "@/lib/products/quantity"
 
 export function groupHasRequiredQuestion(group: FormGroup): boolean {
   return group.questions.some((q) => q.type !== "info" && q.required)
@@ -13,23 +14,38 @@ export function groupHasRequiredQuestion(group: FormGroup): boolean {
 // Compiling a group's zod schema allocates RegExps and nested zod nodes per
 // question. Callers (the wizard) re-validate on every keystroke, so we cache
 // by group identity — refs stay stable while the wizard's `phase` is live.
-const schemaCache = new WeakMap<FormGroup, z.ZodTypeAny>()
+//
+// El `ticketCount` (modo `perTickets` de las preguntas `product`) cambia el
+// min/max efectivo, así que cacheamos por grupo Y por ticketCount. El contexto
+// de la compra no cambia durante la sesión, así que la clave se mantiene estable.
+const schemaCache = new WeakMap<FormGroup, Map<number, z.ZodTypeAny>>()
 
-export function answersSchemaForGroup(group: FormGroup): z.ZodTypeAny {
-  const cached = schemaCache.get(group)
+export function answersSchemaForGroup(
+  group: FormGroup,
+  opts?: { ticketCount?: number },
+): z.ZodTypeAny {
+  // -1 = "sin ticketCount" (validación laxa de perTickets); no colisiona con
+  // conteos reales (≥ 0).
+  const key = opts?.ticketCount ?? -1
+  let byCount = schemaCache.get(group)
+  if (!byCount) {
+    byCount = new Map()
+    schemaCache.set(group, byCount)
+  }
+  const cached = byCount.get(key)
   if (cached) return cached
   const shape: Record<string, ZodTypeAny> = {}
   for (const q of group.questions) {
     if (q.type === "info") continue
-    shape[q.id] = schemaForQuestion(q)
+    shape[q.id] = schemaForQuestion(q, opts?.ticketCount)
   }
   const schema = z.object(shape).strict()
-  schemaCache.set(group, schema)
+  byCount.set(key, schema)
   return schema
 }
 
-function schemaForQuestion(q: FormQuestion): ZodTypeAny {
-  const base = baseSchemaForType(q)
+function schemaForQuestion(q: FormQuestion, ticketCount?: number): ZodTypeAny {
+  const base = baseSchemaForType(q, ticketCount)
   return q.required ? base : base.optional().nullable()
 }
 
@@ -69,7 +85,7 @@ function requiredMessage(q: FormQuestion): string {
   }
 }
 
-function baseSchemaForType(q: FormQuestion): ZodTypeAny {
+function baseSchemaForType(q: FormQuestion, ticketCount?: number): ZodTypeAny {
   const v = q.validation ?? {}
   const msg = v.message
   const requiredMsg = msg ?? requiredMessage(q)
@@ -216,9 +232,11 @@ function baseSchemaForType(q: FormQuestion): ZodTypeAny {
       // min/max). La validación profunda contra el catálogo resuelto (productId
       // en el listado, variante activa, disponibilidad de stock — definition
       // sección 8.2) corre server-side en el submit, donde hay acceso al catálogo.
-      const cfg = q.product
-      const max = cfg?.max ?? 1
-      const min = Math.max(cfg?.min ?? 0, q.required ? 1 : 0)
+      const { min: baseMin, max } = resolveQuantityBounds(
+        q.product,
+        ticketCount,
+      )
+      const min = Math.max(baseMin, q.required ? 1 : 0)
       const pick = z
         .object({
           productId: z.string().min(1, requiredMsg),
@@ -240,9 +258,7 @@ function baseSchemaForType(q: FormQuestion): ZodTypeAny {
       // max > 1 → carrito de líneas (producto+variante). min/max cuentan UNIDADES
       // totales (suma de cantidades), no el número de líneas: el comprador puede
       // llevar varias tallas o varias unidades de una misma talla hasta sumar max.
-      // El tope global 1–10 se reaplica en la derivación (sección 9.8).
-      const unitsOf = (arr: { quantity?: number }[]) =>
-        arr.reduce((n, p) => n + (p.quantity ?? 1), 0)
+      // La salvaguarda anti-abuso global se reaplica en la derivación (sección 9.8).
       return z
         .array(pick, {
           required_error: requiredMsg,
@@ -263,7 +279,7 @@ function baseSchemaForType(q: FormQuestion): ZodTypeAny {
             }
             seen.add(key)
           }
-          const units = unitsOf(arr)
+          const units = sumUnits(arr)
           if (units < min) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: requiredMsg })
           }

@@ -58,6 +58,7 @@ export function FormRenderer({
   variant = "default",
   productLists,
   currency,
+  ticketCount,
 }: {
   group: FormGroup
   initialAnswers?: Answers
@@ -71,12 +72,18 @@ export function FormRenderer({
   // Listados resueltos por questionId para preguntas `product` (definition sección 8).
   productLists?: Record<string, RenderProduct[]>
   currency?: string | null
+  // Cantidad de tickets ya resuelta por scope (para preguntas `product` en modo
+  // `perTickets`). undefined = sin contexto (validación estructural laxa).
+  ticketCount?: number
 }) {
   const [answers, setAnswers] = useState<Answers>(initialAnswers ?? {})
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
-  const schema = useMemo(() => answersSchemaForGroup(group), [group])
+  const schema = useMemo(
+    () => answersSchemaForGroup(group, { ticketCount }),
+    [group, ticketCount],
+  )
 
   const visibleQuestions = useMemo(
     () => group.questions.filter((q) => isVisible(q, answers)),
@@ -200,6 +207,7 @@ export function FormRenderer({
             variant={variant}
             products={productLists?.[q.id]}
             currency={currency}
+            ticketCount={ticketCount}
           />
         ))}
       </div>
@@ -266,6 +274,7 @@ function QuestionField({
   variant,
   products,
   currency,
+  ticketCount,
 }: {
   question: FormQuestion
   value: unknown
@@ -275,6 +284,7 @@ function QuestionField({
   variant: Variant
   products?: RenderProduct[]
   currency?: string | null
+  ticketCount?: number
 }) {
   const id = `q-${question.id}`
   const embedFull =
@@ -405,6 +415,7 @@ function QuestionField({
         variant={variant}
         products={products}
         currency={currency}
+        ticketCount={ticketCount}
       />
       {error && (
         <p className="text-xs text-destructive" role="alert">
@@ -425,6 +436,7 @@ function Field({
   variant,
   products,
   currency,
+  ticketCount,
 }: {
   id: string
   question: FormQuestion
@@ -435,6 +447,7 @@ function Field({
   variant: Variant
   products?: RenderProduct[]
   currency?: string | null
+  ticketCount?: number
 }) {
   const ariaInvalid = invalid || undefined
   // Embed floating-label needs a non-empty placeholder so the input never
@@ -696,6 +709,7 @@ function Field({
           value={value}
           onChange={onChange}
           currency={currency}
+          ticketCount={ticketCount}
         />
       )
   }

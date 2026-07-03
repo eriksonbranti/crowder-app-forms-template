@@ -3,7 +3,14 @@
 // Crowder Embedded App protocol — iframe ↔ parent postMessage handshake
 // (interaction state, height, selected/cleared events).
 // Spec: https://crowder-docs.vercel.app/embedded-app/
-import { Fragment, useCallback, useEffect, useRef, useState } from "react"
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { Button } from "@/components/Button"
 import { FormRenderer } from "@/components/form-renderer/FormRenderer"
@@ -20,6 +27,7 @@ import {
   type ProductForDerive,
 } from "@/lib/products/derive"
 import { formatPrice } from "@/lib/products/format"
+import { ticketCountForScope } from "@/lib/products/quantity"
 import type { ProductLists, RenderProduct } from "@/lib/products/types"
 import { cx } from "@/lib/utils"
 
@@ -343,15 +351,20 @@ export function EmbedWizard(props: Props) {
   // (definition sección 9.8). El servidor es autoritativo en precio al submitear; acá
   // es solo para que el parent muestre el total. Usa los listados resueltos
   // (props.productLists) como lookup.
+  // Lookup por id de producto, estable mientras no cambien los listados.
+  const productLookup = useMemo(() => {
+    const lookup = new Map<string, ProductForDerive>()
+    for (const list of Object.values(props.productLists ?? {})) {
+      for (const p of list) lookup.set(p.id, p)
+    }
+    return lookup
+  }, [props.productLists])
+
   function buildPartnerItems(
     activeSteps: WizardStep[],
     currency: string,
   ): PartnerItem[] {
     if (!props.productLists) return []
-    const lookup = new Map<string, ProductForDerive>()
-    for (const list of Object.values(props.productLists)) {
-      for (const p of list) lookup.set(p.id, p)
-    }
     const sources: ProductAnswerSource[] = []
     for (const s of activeSteps) {
       if (s.kind !== "group") continue
@@ -371,11 +384,11 @@ export function EmbedWizard(props: Props) {
     }
     if (sources.length === 0) return []
     // En el preview ignoramos los errores (el guard autoritativo corre en submit).
-    return derivePartnerItems(sources, lookup, currency).items
+    return derivePartnerItems(sources, productLookup, currency).items
   }
 
   const findIncompleteStepIndex = useCallback(
-    (activeSteps: WizardStep[]): number => {
+    (activeSteps: WizardStep[], itemsLength: number): number => {
       for (let i = 0; i < activeSteps.length; i++) {
         const s = activeSteps[i]
         if (s.kind !== "group") continue
@@ -388,9 +401,9 @@ export function EmbedWizard(props: Props) {
           continue
         }
         // Visited step may have been edited backwards into an invalid state.
-        const result = answersSchemaForGroup(s.group).safeParse(
-          answers[s.stepId],
-        )
+        const result = answersSchemaForGroup(s.group, {
+          ticketCount: ticketCountForScope(s.group.scope, itemsLength),
+        }).safeParse(answers[s.stepId])
         if (!result.success) return i
       }
       return -1
@@ -405,7 +418,7 @@ export function EmbedWizard(props: Props) {
     setSubmitError(null)
     setServerErrors([])
 
-    const failingIdx = findIncompleteStepIndex(p.steps)
+    const failingIdx = findIncompleteStepIndex(p.steps, p.ctx.items.length)
     if (failingIdx >= 0) {
       // Required answers missing — stay silent toward the parent (no
       // `submitted`, no `error`), but surface a message in the iframe so
@@ -510,13 +523,23 @@ export function EmbedWizard(props: Props) {
     return () => window.removeEventListener("message", handler)
   }, [phase.kind, previewMode, props.parentOrigins])
 
-  // Drives the selected/cleared handshake from local completeness — the parent
-  // gates its "Continuar al pago" button on `selected`.
+  // Drives the selected/cleared handshake. El parent (Crowder) usa `selected`
+  // para mostrar el total Y para habilitar "Continuar al pago" (señal acoplada,
+  // no hay un mensaje aparte de "actualizá el carrito sin dejar pagar").
+  //
+  // Política "reflejar de inmediato": si ya hay productos derivados, emitimos
+  // `selected` con ellos AUNQUE el resto del form siga incompleto, para que el
+  // carrito de Crowder los tome al instante. La integridad no se relaja: el pago
+  // efectivo lo sigue gateando `handleParentSubmit`, que no emite `submitted` si
+  // faltan respuestas obligatorias. Sin productos seleccionados se conserva el
+  // gate por completitud (form-only): selected([]) al completar, cleared si falta.
   useEffect(() => {
     if (phase.kind !== "ready") return
     if (submitting) return
-    if (findIncompleteStepIndex(phase.steps) === -1)
-      emitSelected(buildPartnerItems(phase.steps, phase.ctx.currency))
+    const items = buildPartnerItems(phase.steps, phase.ctx.currency)
+    const complete =
+      findIncompleteStepIndex(phase.steps, phase.ctx.items.length) === -1
+    if (items.length > 0 || complete) emitSelected(items)
     else emitClearedAfterSelected()
     // buildPartnerItems lee `answers`, así que `answers` debe estar en deps para
     // re-derivar cuando cambia la selección de productos.
@@ -675,6 +698,7 @@ function WizardBody({
           step={step}
           stepId={step.stepId}
           currency={ctx.currency}
+          ticketCount={ticketCountForScope(step.group.scope, ctx.items.length)}
           productLists={productLists}
           initial={answers[step.stepId] ?? prefillAnswers(step, ctx.user)}
           onChange={(next) => onChange(step.stepId, next)}
@@ -744,6 +768,7 @@ function GroupStep({
   step,
   stepId,
   currency,
+  ticketCount,
   productLists,
   initial,
   onChange,
@@ -753,6 +778,7 @@ function GroupStep({
   step: Extract<WizardStep, { kind: "group" }>
   stepId: string
   currency: string
+  ticketCount: number
   productLists?: ProductLists
   initial: Record<string, unknown>
   onChange: (a: Record<string, unknown>) => void
@@ -789,6 +815,7 @@ function GroupStep({
         formId={formIdFor(stepId)}
         productLists={productsByQuestion}
         currency={currency}
+        ticketCount={ticketCount}
         omitHeader
         omitSubmit
         variant="embed"
