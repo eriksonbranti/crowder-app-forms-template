@@ -1,5 +1,7 @@
 import { Card } from "@/components/Card"
 import type { FormQuestion } from "@/lib/db/schema"
+import { isProductPick } from "@/lib/products/derive"
+import { formatProductPick } from "@/lib/products/format"
 
 import type { PersonRow } from "./FormSubmissionRow"
 
@@ -10,7 +12,9 @@ function countValues(persons: PersonRow[], qid: string): Map<string, number> {
     if (v == null) continue
     const values = Array.isArray(v) ? v : [v]
     for (const val of values) {
-      const key = String(val)
+      // Los picks de una respuesta product son objetos: agrupar por su texto
+      // legible (producto — variante), no por "[object Object]".
+      const key = isProductPick(val) ? formatProductPick(val) : String(val)
       counts.set(key, (counts.get(key) ?? 0) + 1)
     }
   }

@@ -1,7 +1,10 @@
 // Formato de precio para el iframe (definition sección 8.3 / sección 10): prohibido
 // mostrar el número crudo (p. ej. 15000.5). Usa el registro de monedas para el
 // símbolo (S/, AR$, …) y los decimales/locale; Intl solo formatea el número.
+import type { ProductPick } from "@/lib/db/schema"
+
 import { getCurrency } from "./currencies"
+import { toPicks } from "./derive"
 
 const DEFAULT_LOCALE = "es-AR"
 
@@ -39,6 +42,25 @@ export function priceRange(
     if (v.price > hi) hi = v.price
   }
   return lo === Infinity ? null : { lo, hi }
+}
+
+// Texto legible de un ProductPick para tabla/histórico/resumen (NO para export,
+// que usa columnas separadas en export-columns). Usa el snapshot congelado al
+// submit, no el catálogo, para que el texto no cambie si el catálogo cambia.
+// Formato: "Título — Variante ×N" (variante omitida si es producto simple; ×N
+// omitido si la cantidad es 1).
+export function formatProductPick(p: ProductPick): string {
+  const { title, variantTitle } = p.snapshot
+  const base = variantTitle ? `${title} — ${variantTitle}` : title
+  const qty = p.quantity ?? 1
+  return qty > 1 ? `${base} ×${qty}` : base
+}
+
+// Une los picks de una respuesta product (single o array) con "; ". "—" si vacío.
+export function formatProductPicks(value: unknown): string {
+  const picks = toPicks(value)
+  if (picks.length === 0) return "—"
+  return picks.map(formatProductPick).join("; ")
 }
 
 export function formatPrice(

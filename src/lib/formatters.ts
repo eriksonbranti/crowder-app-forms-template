@@ -3,6 +3,8 @@ import type {
   QuestionType,
   TransactionStatus,
 } from "@/lib/db/schema"
+import { isProductPick } from "@/lib/products/derive"
+import { formatProductPicks } from "@/lib/products/format"
 import type { WebhookStatus } from "@/modules/webhooks"
 
 export const valueFormatter = (number: number) =>
@@ -61,6 +63,14 @@ export function truncateId(id: string, n = 16): string {
 
 export function formatAnswer(value: unknown): string {
   if (value == null) return "—"
+  // Respuesta `product`: un pick objeto (max === 1) o array de picks (max > 1).
+  // Sin este caso, join/String producirían "[object Object]".
+  if (
+    isProductPick(value) ||
+    (Array.isArray(value) && value.length > 0 && isProductPick(value[0]))
+  ) {
+    return formatProductPicks(value)
+  }
   if (Array.isArray(value)) return value.join(", ")
   if (typeof value === "boolean") return value ? "✓" : "—"
   return String(value)
