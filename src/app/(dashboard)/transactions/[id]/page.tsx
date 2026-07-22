@@ -260,7 +260,7 @@ export default async function TransactionDetailPage({
                         {it.sectorName} · {it.rateName}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {it.show}
+                        {it.show ?? "—"}
                       </TableCell>
                     </TableRow>
                   ))}

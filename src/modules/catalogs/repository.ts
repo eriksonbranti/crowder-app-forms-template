@@ -261,6 +261,19 @@ export async function listProducts(
     .orderBy(asc(products.position), asc(products.title))
 }
 
+// IDs de todos los productos del catálogo, INCLUYENDO soft-deleted/archivados:
+// el reporte de vendidos cruza picks históricos (un producto pudo archivarse
+// después de venderse) y necesita reconocerlos como pertenecientes al catálogo.
+export async function productIdsForCatalog(
+  catalogId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.catalogId, catalogId))
+  return rows.map((r) => r.id)
+}
+
 export async function insertProduct(input: {
   catalogId: string
   externalId: string | null

@@ -21,3 +21,4 @@ export {
 } from "./service"
 export type { Catalog, Collection, Product } from "./repository"
 export * as catalogsRepo from "./repository"
+export { buildInventoryTable, buildSalesTable } from "./export"

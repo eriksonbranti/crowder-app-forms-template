@@ -14,6 +14,7 @@ import { Input } from "@/components/Input"
 import { Label } from "@/components/Label"
 import { FormRenderer } from "@/components/form-renderer/FormRenderer"
 import type { FormGroup } from "@/lib/db/schema"
+import type { RenderProduct } from "@/lib/products/types"
 
 import { editSubmissionAction } from "../actions"
 
@@ -27,6 +28,9 @@ export function EditSubmissionDrawer({
   onClose: () => void
 }) {
   const [group, setGroup] = useState<FormGroup | null>(null)
+  const [productLists, setProductLists] = useState<
+    Record<string, RenderProduct[]>
+  >({})
   const [reason, setReason] = useState("")
   const [serverError, setServerError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -34,7 +38,10 @@ export function EditSubmissionDrawer({
   useEffect(() => {
     fetch(`/api/admin/submissions/${submissionId}/form`)
       .then((r) => r.json())
-      .then((data) => setGroup(data.group))
+      .then((data) => {
+        setGroup(data.group)
+        setProductLists(data.productLists ?? {})
+      })
       .catch(() => setServerError("No se pudo cargar el form"))
   }, [submissionId])
 
@@ -84,6 +91,7 @@ export function EditSubmissionDrawer({
                 initialAnswers={initialAnswers}
                 onSubmit={handleSubmit}
                 submitLabel={pending ? "Guardando…" : "Guardar cambio"}
+                productLists={productLists}
               />
               {serverError && (
                 <p className="text-sm text-destructive">{serverError}</p>

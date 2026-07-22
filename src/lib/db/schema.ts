@@ -500,7 +500,7 @@ export const transactions = pgTable("transactions", {
 
 export type ItemSnapshot = {
   uuid: string
-  show: string
+  show: string | null
   sectorName: string
   rateName: string
   sectionName: string | null
