@@ -23,26 +23,32 @@ const MAX_ITEMS = 200
 const MAX_SUBMISSIONS = 1_000
 const MAX_ANSWER_KEYS = 200
 
-const itemSchema = z.object({
-  uuid: z.string().min(1),
-  show: z.string(),
-  sectorName: z.string(),
-  rateName: z.string(),
-  sectionName: z.string().nullable().default(null),
-  row: z.string().nullable().default(null),
-  seat: z.string().nullable().default(null),
-  quantity: z.number().int().min(1),
-  price: z.number(),
-  holder: z
-    .object({
-      firstName: z.string(),
-      lastName: z.string(),
-      documentType: z.string(),
-      documentNumber: z.string(),
-    })
-    .nullable()
-    .default(null),
-})
+const itemSchema = z
+  .object({
+    uuid: z.string().min(1),
+    // `show` no aplica a productos como abonos de temporada (no atados a un
+    // partido concreto), así que es opcional igual que `sectionName`.
+    show: z.string().nullable().default(null),
+    sectorName: z.string(),
+    rateName: z.string(),
+    sectionName: z.string().nullable().default(null),
+    row: z.string().nullable().default(null),
+    seat: z.string().nullable().default(null),
+    quantity: z.number().int().min(1),
+    price: z.number(),
+    holder: z
+      .object({
+        firstName: z.string(),
+        lastName: z.string(),
+        documentType: z.string(),
+        documentNumber: z.string(),
+      })
+      .nullable()
+      .default(null),
+  })
+  // Conservamos cualquier campo adicional que envíe el iframe para no perder
+  // información no contemplada aún en el schema.
+  .passthrough()
 
 const contextSchema = z.object({
   eventId: z.number().int(),
@@ -56,10 +62,11 @@ const contextSchema = z.object({
       lastName: z.string().nullable().default(null),
       country: z.string().nullable().default(null),
     })
+    .passthrough()
     .nullable()
     .optional(),
   items: z.array(itemSchema).max(MAX_ITEMS),
-})
+}).passthrough()
 
 const submissionSchema = z.object({
   formId: z.string().min(1),

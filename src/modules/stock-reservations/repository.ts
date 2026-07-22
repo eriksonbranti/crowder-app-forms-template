@@ -1,4 +1,4 @@
-import { and, eq, lt, sql, type InferSelectModel } from "drizzle-orm"
+import { and, eq, inArray, lt, sql, type InferSelectModel } from "drizzle-orm"
 
 import { db } from "@/lib/db"
 import { stockReservations } from "@/lib/db/schema"
@@ -84,6 +84,41 @@ export async function heldQuantityForVariant(
       ),
     )
   return Number(row?.total ?? 0)
+}
+
+// Agregado de reservas por (producto, variante) para un set de productos: suma
+// de unidades en `held` (reservado, aún sin pagar) y `consumed` (vendido
+// confirmado). Alimenta el reporte de inventario del catálogo:
+//   disponible(variante) = variant.stock − held
+export type VariantReservationTotals = { held: number; consumed: number }
+
+export async function sumByProductVariant(
+  productIds: string[],
+): Promise<Map<string, VariantReservationTotals>> {
+  const out = new Map<string, VariantReservationTotals>()
+  if (productIds.length === 0) return out
+  const rows = await db
+    .select({
+      productId: stockReservations.productId,
+      variantId: stockReservations.variantId,
+      status: stockReservations.status,
+      total: sql<number>`coalesce(sum(${stockReservations.quantity}), 0)`,
+    })
+    .from(stockReservations)
+    .where(inArray(stockReservations.productId, productIds))
+    .groupBy(
+      stockReservations.productId,
+      stockReservations.variantId,
+      stockReservations.status,
+    )
+  for (const r of rows) {
+    const key = `${r.productId}:${r.variantId}`
+    const entry = out.get(key) ?? { held: 0, consumed: 0 }
+    if (r.status === "held") entry.held += Number(r.total)
+    else if (r.status === "consumed") entry.consumed += Number(r.total)
+    out.set(key, entry)
+  }
+  return out
 }
 
 // Barrido de holds vencidos: un `held` cuyo expiresAt ya pasó se trata como

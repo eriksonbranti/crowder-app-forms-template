@@ -3,9 +3,14 @@ export {
   insertHeld,
   setStatusForTransaction,
   heldQuantityForVariant,
+  sumByProductVariant,
   releaseExpired,
 } from "./repository"
-export type { StockReservation, ReservationStatus } from "./repository"
+export type {
+  StockReservation,
+  ReservationStatus,
+  VariantReservationTotals,
+} from "./repository"
 export {
   reserveStock,
   confirmStock,

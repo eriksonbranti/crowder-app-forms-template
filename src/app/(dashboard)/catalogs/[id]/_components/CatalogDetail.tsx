@@ -60,6 +60,7 @@ import {
   updateCatalog,
   updateCollection,
 } from "../../actions"
+import { CatalogExportMenu } from "./CatalogExportMenu"
 
 type CollectionRow = { id: string; title: string; externalId: string | null }
 type ProductRow = {
@@ -397,6 +398,7 @@ export function CatalogDetail({
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Productos</h2>
           <div className="flex items-center gap-2">
+            <CatalogExportMenu catalogId={catalog.id} />
             <Button
               variant="ghost"
               disabled={products.length === 0}
